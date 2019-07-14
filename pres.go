@@ -5,6 +5,7 @@ import (
 	"github.com/allen-b1/cards"
 )
 
+// Type PresGame implements Game and represents a game of President.
 type PresGame struct {
 	players  []string
 	turn     int
@@ -15,6 +16,7 @@ type PresGame struct {
 	pile  cards.Deck
 }
 
+// Function NewPresGame creates a new game of President.
 func NewPresGame(players []string) *PresGame {
 	return &PresGame{
 		players: players,
