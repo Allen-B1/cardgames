@@ -1,4 +1,6 @@
-// Package cardgames provides a set of utilities for working with card games.
+/*
+Package cardgames provides a set of utilities for working with card games.
+*/
 
 package cardgames
 
