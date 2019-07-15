@@ -85,9 +85,9 @@ func (g *PresGame) Piles() []cards.Deck {
 }
 
 func (g *PresGame) bomb() {
+	g.discard = append(g.discard, g.pile...)
 	g.pile = nil
 	g.mode = 0
-	g.discard = append(g.discard, g.pile...)
 }
 
 func (g *PresGame) Play(player int, cards []cards.Card) error {
