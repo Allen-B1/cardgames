@@ -84,7 +84,30 @@ func (g *PresGame) Piles() []cards.Deck {
 	return []cards.Deck{g.pile, g.discard}
 }
 
+func (g *PresGame) bomb() {
+	g.pile = nil
+	g.mode = 0
+	g.discard = append(g.discard, g.pile...)
+}
+
 func (g *PresGame) Play(player int, cards []cards.Card) error {
+	defer func() {
+		if len(g.players)-len(g.winners)-len(g.losers) <= 1 {
+		outer:
+			for player, _ := range g.players {
+				combined := append(append([]int(nil), g.winners...), g.losers...)
+				for _, winner := range combined {
+					if winner == player {
+						continue outer
+					}
+				}
+
+				g.winners = append(g.winners, player)
+				return
+			}
+		}
+	}()
+
 	// DONT PLAY OUT OF TURN PLEASE
 	if g.turn != player {
 		return fmt.Errorf("playing out of turn: it's %s's turn", g.players[g.turn])
@@ -95,7 +118,7 @@ func (g *PresGame) Play(player int, cards []cards.Card) error {
 
 		// Clear if nobody can play
 		if g.lastplay == g.turn {
-			g.pile = nil
+			g.bomb()
 		}
 
 		return nil
@@ -152,9 +175,7 @@ func (g *PresGame) Play(player int, cards []cards.Card) error {
 
 	if cards[0].Value() == 2 || len(cards) == 4 {
 		// Bomb
-		g.discard = append(g.discard, g.pile...)
-		g.pile = nil
-		g.mode = 0
+		g.bomb()
 	} else {
 		g.pile = append(g.pile, cards...)
 		// TODO: Skipping
@@ -164,6 +185,7 @@ func (g *PresGame) Play(player int, cards []cards.Card) error {
 
 	if len(g.hands[player]) == 0 {
 		g.winners = append(g.winners, player)
+		g.bomb()
 	}
 
 	return nil
