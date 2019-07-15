@@ -3,6 +3,7 @@ package cardgames
 import (
 	"fmt"
 	"github.com/allen-b1/cards"
+	"sort"
 )
 
 // Type PresGame implements Game and represents a game of President.
@@ -12,16 +13,46 @@ type PresGame struct {
 	lastplay int  // the last person that played a card
 	mode     uint // 0 for no mode
 
-	hands []cards.Deck
-	pile  cards.Deck
+	hands   []cards.Deck
+	pile    cards.Deck
+	discard cards.Deck
+
+	winners []int
+	losers  []int // TODO: when somebody leaves
 }
 
 // Function NewPresGame creates a new game of President.
 func NewPresGame(players []string) *PresGame {
+	hands := make([]cards.Deck, len(players))
+	fulldeck := cards.FullDeck()
+	fulldeck.Shuffle()
+	start := 0
+	for index, card := range fulldeck {
+		playerIndex := index % len(players)
+		hands[playerIndex] = append(hands[playerIndex], card)
+		if card == cards.New(3, cards.Spades) {
+			start = playerIndex
+		}
+	}
+
+	for _, hand := range hands {
+		sort.Slice(hand, func(i, j int) bool {
+			vali := hand[i].Value()
+			valj := hand[j].Value()
+			if vali == 1 {
+				vali = 14
+			}
+			if valj == 1 {
+				valj = 14
+			}
+			return vali < valj
+		})
+	}
+
 	return &PresGame{
 		players: players,
-		turn:    0,                                // TODO: This should be whoever has 3S
-		hands:   make([]cards.Deck, len(players)), // TODO: actually deal....
+		turn:    start,
+		hands:   hands,
 	}
 }
 
@@ -49,13 +80,18 @@ func (g *PresGame) Hands(player int) []cards.Deck {
 	return hands
 }
 
-func (g *PresGame) Pile() cards.Deck {
-	return g.pile
+func (g *PresGame) Piles() []cards.Deck {
+	return []cards.Deck{g.pile, g.discard}
 }
 
 func (g *PresGame) Play(player int, cards []cards.Card) error {
+	// DONT PLAY OUT OF TURN PLEASE
+	if g.turn != player {
+		return fmt.Errorf("playing out of turn: it's %s's turn", g.players[g.turn])
+	}
+
 	if len(cards) == 0 {
-		g.turn = (g.turn + 1) % len(g.players)
+		g.increaseTurnBy(1)
 
 		// Clear if nobody can play
 		if g.lastplay == g.turn {
@@ -63,11 +99,6 @@ func (g *PresGame) Play(player int, cards []cards.Card) error {
 		}
 
 		return nil
-	}
-
-	// DONT PLAY OUT OF TURN PLEASE
-	if g.turn != player {
-		return fmt.Errorf("playing out of turn: it's %s's turn", g.players[g.turn])
 	}
 
 	for _, card := range cards {
@@ -121,14 +152,35 @@ func (g *PresGame) Play(player int, cards []cards.Card) error {
 
 	if cards[0].Value() == 2 || len(cards) == 4 {
 		// Bomb
+		g.discard = append(g.discard, g.pile...)
 		g.pile = nil
+		g.mode = 0
 	} else {
 		g.pile = append(g.pile, cards...)
-		g.turn = (g.turn + 1) % len(g.players)
+		// TODO: Skipping
+		g.increaseTurnBy(1)
 	}
 	g.lastplay = player
 
+	if len(g.hands[player]) == 0 {
+		g.winners = append(g.winners, player)
+	}
+
 	return nil
+}
+
+func (g *PresGame) increaseTurnBy(n int) {
+	targetTurn := g.turn
+	for i := 0; i < n; i++ {
+		targetTurn = (targetTurn + 1) % len(g.players)
+		for _, winner := range g.winners {
+			if targetTurn == winner {
+				i--
+				continue
+			}
+		}
+	}
+	g.turn = targetTurn
 }
 
 // returns true if c1 < c2
@@ -144,4 +196,8 @@ func presLess(c1 cards.Card, c2 cards.Card) bool {
 	}
 
 	return val1 < val2
+}
+
+func (g *PresGame) Winners() []int {
+	return g.winners
 }

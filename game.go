@@ -1,7 +1,6 @@
 /*
 Package cardgames provides a set of utilities for working with card games.
 */
-
 package cardgames
 
 import (
@@ -24,11 +23,26 @@ type Game interface {
 	// Method Hands returns the hands from the player's point of view. The returned slice cannot be modified.
 	Hands(player int) []cards.Deck
 
-	// Method Pile returns the pile in the middle. The returned Deck cannot be modified.
-	Pile() cards.Deck
+	// Method Piles returns the piles. The returned slice cannot be modified.
+	Piles() []cards.Deck
+
+	// Method Winners returns an array showing what places the players recieved.
+	// If a place is not yet decided, -1 should fill it.
+	// The returned slice cannot be modified.
+	Winners() []int
 
 	// Method Play makes the given player play the given cards.
 	// Passing is represented by playing no cards. If this function returns an error,
 	// it can't have also changed the game's state.
 	Play(player int, cards []cards.Card) error
+}
+
+// Function Type returns a string representation of the name of the card game.
+func Type(g Game) string {
+	switch g.(type) {
+	case *PresGame:
+		return "president"
+	default:
+		return ""
+	}
 }
