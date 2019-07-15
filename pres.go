@@ -18,7 +18,6 @@ type PresGame struct {
 	discard cards.Deck
 
 	winners []int
-	losers  []int // TODO: when somebody leaves
 }
 
 // Function NewPresGame creates a new game of President.
@@ -92,11 +91,10 @@ func (g *PresGame) bomb() {
 
 func (g *PresGame) Play(player int, cards []cards.Card) error {
 	defer func() {
-		if len(g.players)-len(g.winners)-len(g.losers) <= 1 {
+		if len(g.players)-len(g.winners) <= 1 {
 		outer:
 			for player, _ := range g.players {
-				combined := append(append([]int(nil), g.winners...), g.losers...)
-				for _, winner := range combined {
+				for _, winner := range g.winners {
 					if winner == player {
 						continue outer
 					}
@@ -124,6 +122,7 @@ func (g *PresGame) Play(player int, cards []cards.Card) error {
 		return nil
 	}
 
+	// Check that all cards are in the hand
 	for _, card := range cards {
 		has := false
 		for _, handcard := range g.hands[player] {
@@ -137,6 +136,7 @@ func (g *PresGame) Play(player int, cards []cards.Card) error {
 		}
 	}
 
+	// Check that required # are played
 	if g.mode != 0 && int(g.mode) != len(cards) && len(cards) != 4 && cards[0].Value() != 2 {
 		return fmt.Errorf("can't play cards: %d given but %d required", len(cards), g.mode)
 	}
@@ -177,9 +177,12 @@ func (g *PresGame) Play(player int, cards []cards.Card) error {
 		// Bomb
 		g.bomb()
 	} else {
+		if g.mode == 1 && len(g.pile) != 0 && cards[0].Value() == g.pile[len(g.pile)-1].Value() {
+			g.increaseTurnBy(2)
+		} else {
+			g.increaseTurnBy(1)
+		}
 		g.pile = append(g.pile, cards...)
-		// TODO: Skipping
-		g.increaseTurnBy(1)
 	}
 	g.lastplay = player
 
