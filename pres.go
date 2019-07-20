@@ -89,7 +89,7 @@ func (g *PresGame) bomb() {
 	g.mode = 0
 }
 
-func (g *PresGame) Play(player int, cards []cards.Card) error {
+func (g *PresGame) Play(player int, cardlist []cards.Card) error {
 	defer func() {
 		if len(g.players)-len(g.winners) <= 1 {
 		outer:
@@ -106,13 +106,25 @@ func (g *PresGame) Play(player int, cards []cards.Card) error {
 		}
 	}()
 
+	isCompletion := false
+	combined := append(append(cards.Deck(nil), g.pile...), cardlist...)
+	if len(combined) >= 4 {
+		isCompletion = true
+		for i := len(combined) - 4; i < len(combined)-1; i++ {
+			if combined[i].Value() != combined[i+1].Value() {
+				isCompletion = false
+			}
+		}
+	}
+	fmt.Println(isCompletion)
+
 	// DONT PLAY OUT OF TURN PLEASE
-	if g.turn != player {
+	if g.turn != player && !isCompletion {
 		return fmt.Errorf("playing out of turn: it's %s's turn", g.players[g.turn])
 	}
 
-	if len(cards) == 0 {
-		g.increaseTurnBy(1)
+	if len(cardlist) == 0 {
+		g.turn = g.after(g.turn, 1)
 
 		// Clear if nobody can play
 		if g.lastplay == g.turn {
@@ -122,8 +134,8 @@ func (g *PresGame) Play(player int, cards []cards.Card) error {
 		return nil
 	}
 
-	// Check that all cards are in the hand
-	for _, card := range cards {
+	// Check that all cardlist are in the hand
+	for _, card := range cardlist {
 		has := false
 		for _, handcard := range g.hands[player] {
 			if card == handcard {
@@ -137,33 +149,33 @@ func (g *PresGame) Play(player int, cards []cards.Card) error {
 	}
 
 	// Check that required # are played
-	if g.mode != 0 && int(g.mode) != len(cards) && len(cards) != 4 && cards[0].Value() != 2 {
-		return fmt.Errorf("can't play cards: %d given but %d required", len(cards), g.mode)
+	if g.mode != 0 && int(g.mode) != len(cardlist) && len(cardlist) != 4 && cardlist[0].Value() != 2 && !isCompletion {
+		return fmt.Errorf("can't play cards: %d given but %d required", len(cardlist), g.mode)
 	}
 
 	// Check if 1) all cards have = face value and 2) not playing multiple bombs
-	if len(cards) > 1 {
-		for i := 0; i < len(cards)-1; i++ {
-			if cards[i].Value() != cards[i+1].Value() {
-				return fmt.Errorf("can't play card: %v and %v have different face values", cards[i], cards[i+1])
+	if len(cardlist) > 1 {
+		for i := 0; i < len(cardlist)-1; i++ {
+			if cardlist[i].Value() != cardlist[i+1].Value() {
+				return fmt.Errorf("can't play card: %v and %v have different face values", cardlist[i], cardlist[i+1])
 			}
 		}
 
-		if cards[0].Value() == 2 {
+		if cardlist[0].Value() == 2 {
 			return fmt.Errorf("can't play multiple 2s")
 		}
 	}
 
 	// Check that it's greater than...
-	if len(g.pile) != 0 && presLess(cards[0], g.pile[len(g.pile)-1]) {
-		return fmt.Errorf("can't play card: %v is less than %v", cards[0], g.pile[len(g.pile)-1])
+	if len(g.pile) != 0 && presLess(cardlist[0], g.pile[len(g.pile)-1]) {
+		return fmt.Errorf("can't play card: %v is less than %v", cardlist[0], g.pile[len(g.pile)-1])
 	}
 
 	// Set mode
-	g.mode = uint(len(cards))
+	g.mode = uint(len(cardlist))
 
 	// Remove cards from hand
-	for _, card := range cards {
+	for _, card := range cardlist {
 		for i, handcard := range g.hands[player] {
 			if card == handcard {
 				g.hands[player] = append(g.hands[player][:i], g.hands[player][i+1:]...)
@@ -173,39 +185,41 @@ func (g *PresGame) Play(player int, cards []cards.Card) error {
 		}
 	}
 
-	if cards[0].Value() == 2 || len(cards) == 4 {
-		// Bomb
+	g.pile = append(g.pile, cardlist...)
+	if cardlist[0].Value() == 2 || len(cardlist) == 4 || isCompletion { // Bomb
 		g.bomb()
+		g.turn = player
 	} else {
-		if g.mode == 1 && len(g.pile) != 0 && cards[0].Value() == g.pile[len(g.pile)-1].Value() {
-			g.increaseTurnBy(2)
+		if g.mode == 1 && len(g.pile) != 0 && cardlist[0].Value() == g.pile[len(g.pile)-1].Value() {
+			g.turn = g.after(g.turn, 2)
 		} else {
-			g.increaseTurnBy(1)
+			g.turn = g.after(g.turn, 1)
 		}
-		g.pile = append(g.pile, cards...)
 	}
 	g.lastplay = player
 
 	if len(g.hands[player]) == 0 {
 		g.winners = append(g.winners, player)
+		g.lastplay = g.after(player, 1) // Prevent infinite loop if nobody can play
 		g.bomb()
 	}
 
 	return nil
 }
 
-func (g *PresGame) increaseTurnBy(n int) {
-	targetTurn := g.turn
+func (g *PresGame) after(turn int, n int) int {
+	targetTurn := turn
+outer:
 	for i := 0; i < n; i++ {
 		targetTurn = (targetTurn + 1) % len(g.players)
 		for _, winner := range g.winners {
 			if targetTurn == winner {
 				i--
-				continue
+				continue outer
 			}
 		}
 	}
-	g.turn = targetTurn
+	return targetTurn
 }
 
 // returns true if c1 < c2
