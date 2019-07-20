@@ -37,7 +37,7 @@ type Game interface {
 // Function Type returns a string representation of the name of the card game.
 func Type(g Game) string {
 	switch g.(type) {
-	case *PresGame:
+	case *President:
 		return "president"
 	default:
 		return ""

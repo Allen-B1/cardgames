@@ -6,8 +6,8 @@ import (
 	"sort"
 )
 
-// Type PresGame implements Game and represents a game of President.
-type PresGame struct {
+// Type President implements Game and represents a game of President.
+type President struct {
 	players  []string
 	turn     int
 	lastplay int  // the last person that played a card
@@ -20,8 +20,8 @@ type PresGame struct {
 	winners []int
 }
 
-// Function NewPresGame creates a new game of President.
-func NewPresGame(players []string) *PresGame {
+// Function NewPresident creates a new game of President.
+func NewPresident(players []string) *President {
 	hands := make([]cards.Deck, len(players))
 	fulldeck := cards.FullDeck()
 
@@ -55,22 +55,22 @@ func NewPresGame(players []string) *PresGame {
 		})
 	}
 
-	return &PresGame{
+	return &President{
 		players: players,
 		turn:    start,
 		hands:   hands,
 	}
 }
 
-func (g *PresGame) Players() []string {
+func (g *President) Players() []string {
 	return g.players
 }
 
-func (g *PresGame) Turn() int {
+func (g *President) Turn() int {
 	return int(g.turn)
 }
 
-func (g *PresGame) Hands(player int) []cards.Deck {
+func (g *President) Hands(player int) []cards.Deck {
 	hands := make([]cards.Deck, len(g.players))
 	for i := 0; i < len(g.players); i++ {
 		if i == player {
@@ -82,17 +82,17 @@ func (g *PresGame) Hands(player int) []cards.Deck {
 	return hands
 }
 
-func (g *PresGame) Piles() []cards.Deck {
+func (g *President) Piles() []cards.Deck {
 	return []cards.Deck{g.pile, g.discard}
 }
 
-func (g *PresGame) bomb() {
+func (g *President) bomb() {
 	g.discard = append(g.discard, g.pile...)
 	g.pile = nil
 	g.mode = 0
 }
 
-func (g *PresGame) Play(player int, cardlist []cards.Card) error {
+func (g *President) Play(player int, cardlist []cards.Card) error {
 	defer func() {
 		if len(g.players)-len(g.winners) <= 1 {
 		outer:
@@ -219,7 +219,7 @@ func (g *PresGame) Play(player int, cardlist []cards.Card) error {
 	return nil
 }
 
-func (g *PresGame) after(turn int, n int) int {
+func (g *President) after(turn int, n int) int {
 	targetTurn := turn
 outer:
 	for i := 0; i < n; i++ {
@@ -249,6 +249,6 @@ func presLess(c1 cards.Card, c2 cards.Card) bool {
 	return val1 < val2
 }
 
-func (g *PresGame) Winners() []int {
+func (g *President) Winners() []int {
 	return g.winners
 }
