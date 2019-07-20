@@ -24,7 +24,14 @@ type PresGame struct {
 func NewPresGame(players []string) *PresGame {
 	hands := make([]cards.Deck, len(players))
 	fulldeck := cards.FullDeck()
+
 	fulldeck.Shuffle()
+
+	// Don't deal out full deck for 2 people since that'll lead to completions every turn
+	if len(players) == 2 {
+		fulldeck = fulldeck[:36]
+	}
+
 	start := 0
 	for index, card := range fulldeck {
 		playerIndex := index % len(players)
