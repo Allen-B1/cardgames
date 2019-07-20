@@ -63,10 +63,6 @@ func (g *PresGame) Turn() int {
 	return int(g.turn)
 }
 
-func (g *PresGame) Ended() bool {
-	return false
-}
-
 func (g *PresGame) Hands(player int) []cards.Deck {
 	hands := make([]cards.Deck, len(g.players))
 	for i := 0; i < len(g.players); i++ {
@@ -106,6 +102,7 @@ func (g *PresGame) Play(player int, cardlist []cards.Card) error {
 		}
 	}()
 
+	// Check whether or not this will complete the set
 	isCompletion := false
 	combined := append(append(cards.Deck(nil), g.pile...), cardlist...)
 	if len(combined) >= 4 {
@@ -116,13 +113,13 @@ func (g *PresGame) Play(player int, cardlist []cards.Card) error {
 			}
 		}
 	}
-	fmt.Println(isCompletion)
 
 	// DONT PLAY OUT OF TURN PLEASE
 	if g.turn != player && !isCompletion {
 		return fmt.Errorf("playing out of turn: it's %s's turn", g.players[g.turn])
 	}
 
+	// Pass
 	if len(cardlist) == 0 {
 		g.turn = g.after(g.turn, 1)
 
@@ -171,6 +168,11 @@ func (g *PresGame) Play(player int, cardlist []cards.Card) error {
 		return fmt.Errorf("can't play card: %v is less than %v", cardlist[0], g.pile[len(g.pile)-1])
 	}
 
+	// Make sure that the player isn't bombing nothing
+	if cardlist[0].Value() == 2 && len(g.pile) == 0 {
+		return fmt.Errorf("can't bomb nothing")
+	}
+
 	// Set mode
 	g.mode = uint(len(cardlist))
 
@@ -185,7 +187,9 @@ func (g *PresGame) Play(player int, cardlist []cards.Card) error {
 		}
 	}
 
+	// Add cards to pile
 	g.pile = append(g.pile, cardlist...)
+
 	if cardlist[0].Value() == 2 || len(cardlist) == 4 || isCompletion { // Bomb
 		g.bomb()
 		g.turn = player
@@ -196,6 +200,7 @@ func (g *PresGame) Play(player int, cardlist []cards.Card) error {
 			g.turn = g.after(g.turn, 1)
 		}
 	}
+
 	g.lastplay = player
 
 	if len(g.hands[player]) == 0 {

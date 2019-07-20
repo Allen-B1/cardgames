@@ -17,9 +17,6 @@ type Game interface {
 	// Method Turn returns the current turn.
 	Turn() int
 
-	// Method Ended returns whether the game has ended (e.g. one person one).
-	Ended() bool
-
 	// Method Hands returns the hands from the player's point of view. The returned slice cannot be modified.
 	Hands(player int) []cards.Deck
 
@@ -45,4 +42,15 @@ func Type(g Game) string {
 	default:
 		return ""
 	}
+}
+
+// Function Ended returns true if g.Winners() doesn't contain any negative numbers.
+func Ended(g Game) bool {
+	for _, winner := range g.Winners() {
+		if winner < 0 {
+			return false
+		}
+	}
+
+	return true
 }
